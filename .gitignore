@@ -1,0 +1,6 @@
+fotos
+output_data
+.ipynb_checkpoints
+*.jpg
+*.png
+*.jpeg
