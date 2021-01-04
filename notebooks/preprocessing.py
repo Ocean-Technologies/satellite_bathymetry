@@ -38,6 +38,16 @@ def get_pixel_from_coord(coord_x, coord_y, scale_x, scale_y, start_x, start_y):
 
 
 def ndwi(first_band, second_band):
+    """Apply ndwi filter to a pair of images
+
+    Args:
+        first_band [array]: First band to use on ndwi
+        second_band [array]: Second band to use on ndwi
+
+    Returns:
+        [None | array]: Return 2d array containing ndwi image or None if images have different shapes
+    """
+
     if first_band.shape != second_band.shape:
         return None
 
@@ -50,7 +60,7 @@ def ndwi(first_band, second_band):
 
             if temp2 == 0:
                 output[i][j] = 1
-                print('Math error, cannot divide by 0 - Assigning 1 to pixel value')
+                print(f'Math error on pixel [{i}][{j}], cannot divide by 0 - Assigning 1 to pixel value')
             else:
                 temp3 = temp1/temp2
                 output[i][j] = temp3
