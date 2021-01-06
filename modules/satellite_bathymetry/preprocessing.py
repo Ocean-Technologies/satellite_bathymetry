@@ -1,25 +1,25 @@
 import numpy as np
 from tqdm.notebook import tqdm
 
-def get_coord_from_pixel_pos(i, j, start_value_x, start_value_y, scale_x, scale_y):
+def get_coord_from_pixel_pos(i, j, scale_x=10, scale_y=10, start_x=707160.0, start_y=7117780.0):
     """This functions get image data and returns the UTM coord for a pixel
 
     Args:
         coord_x         [int]: pixel X coord
         coord_y         [int]: pixel Y coord
-        start_value_x   [float]: start X coord (UTM)
-        start_value_x   [float]: start Y coord (UTM)
         scale_x         [int]: image X scale
         scale_y         [int]: image Y scale
+        start_value_x   [float]: start X coord (UTM)
+        start_value_x   [float]: start Y coord (UTM)
 
     Returns:
         tuple [float]: UTM value for pixel
         e.g : (707170.0, 7117780.0)
     """
 
-    return (start_value_x+scale_x*i, start_value_y-scale_y*j)
+    return (start_x+scale_x*i, start_y-scale_y*j)
 
-def get_pixel_from_coord(coord_x, coord_y, scale_x, scale_y, start_x, start_y):
+def get_pixel_from_coord(coord_x, coord_y, scale_x=10, scale_y=10, start_x=707160.0, start_y=7117780.0):
     """This functions get an UTM position and return the pixel position for that position
     Args:
         coord_x     [float]: UTM X coord
