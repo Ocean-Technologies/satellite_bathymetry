@@ -4,6 +4,9 @@ models
 output_data
 photos
 *.ipynb_checkpoints
+*pkl.z
+*.csv
+*.h5
 
 __pycache__/
 *.py[cod]
