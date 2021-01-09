@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm.notebook import tqdm
 
-def get_coord_from_pixel_pos(i, j, scale_x=10, scale_y=10, start_x=707160.0, start_y=7117780.0):
+def get_coord_from_pixel_pos(i, j, scale_x=10, scale_y=-10, start_x=707160.0, start_y=7117780.0):
     """This functions get image data and returns the UTM coord for a pixel
 
     Args:
@@ -17,9 +17,9 @@ def get_coord_from_pixel_pos(i, j, scale_x=10, scale_y=10, start_x=707160.0, sta
         e.g : (707170.0, 7117780.0)
     """
 
-    return (start_x+scale_x*i, start_y-scale_y*j)
+    return (start_x+scale_x*i, start_y+scale_y*j)
 
-def get_pixel_from_coord(coord_x, coord_y, scale_x=10, scale_y=10, start_x=707160.0, start_y=7117780.0):
+def get_pixel_from_coord(coord_x, coord_y, scale_x=10, scale_y=-10, start_x=707160.0, start_y=7117780.0):
     """This functions get an UTM position and return the pixel position for that position
     Args:
         coord_x     [float]: UTM X coord
@@ -34,7 +34,13 @@ def get_pixel_from_coord(coord_x, coord_y, scale_x=10, scale_y=10, start_x=70716
         e.g : (1, 0)
     """
 
-    return (int((coord_x-start_x)/scale_x), int((start_y-coord_y)/scale_y))
+    return (int((coord_x-start_x)/scale_x), int((coord_y-start_y)/scale_y))
+
+def pixel_log_division(first_band, second_band):
+    return np.log((1000*first_band))/np.log((1000*second_band))
+
+def pixel_ndwi(first_band, second_band):
+    return (first_band - second_band) / (first_band + second_band)
 
 
 def ndwi(first_band, second_band):
