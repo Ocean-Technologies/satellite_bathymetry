@@ -36,7 +36,7 @@ def get_pixel_from_coord(coord_x, coord_y, scale_x=10, scale_y=-10, start_x=7071
 
     return (int((coord_x-start_x)/scale_x), int((coord_y-start_y)/scale_y))
 
-def pixel_log_division(first_band, second_band):
+def pixel_log_ratio(first_band, second_band):
     return np.log((1000*first_band))/np.log((1000*second_band))
 
 def pixel_ndwi(first_band, second_band):
