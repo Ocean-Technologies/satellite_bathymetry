@@ -6,14 +6,14 @@ Research and development of modules for satellite derivated bathymetry (SDA) usi
 
 # Dataset Structure
 
-- Main DATA folder
-  | - FOLDER_NAME
-    | - train_data_XXX.ext
-    | - val_data_XXX.ext
-    | - model_MODEL_CLASS_XXX.ext
-    | - pred_MODEL_CLASS_XXX.ext
-  | - FOLDER_NAME_2
-    | - train_data_XXX.ext
+- Main DATA folder  
+  | - FOLDER_NAME  
+    | - train_data_XXX.ext  
+    | - val_data_XXX.ext  
+    | - model_MODEL_CLASS_XXX.ext  
+    | - pred_MODEL_CLASS_XXX.ext  
+  | - FOLDER_NAME_2  
+    | - train_data_XXX.ext  
     
 .................
     
