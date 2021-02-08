@@ -6,6 +6,7 @@ Research and development of modules for satellite derivated bathymetry (SDA) usi
 
 # Dataset Structure
 
+```
 - Main DATA folder  
   | - FOLDER_NAME  
     | - train_data_XXX.ext  
@@ -16,5 +17,6 @@ Research and development of modules for satellite derivated bathymetry (SDA) usi
     | - train_data_XXX.ext  
     
 .................
+```
     
 
