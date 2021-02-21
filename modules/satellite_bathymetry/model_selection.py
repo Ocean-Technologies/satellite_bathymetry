@@ -20,7 +20,7 @@ def cross_validation(features, target, metric, mdl=None, n_splits=10, shuffle=Tr
         k_fold_scores ([dict]):            [Dict with scores for each fold on cross validation]
     """
 
-    if mdl is None or issubclass(mdl, LGBMRegressor):
+    if mdl is None or isinstance(mdl, LGBMRegressor):
         learning_rate = hyper_kwargs.get('learning_rate', 0.1)
         max_depth = hyper_kwargs.get('max_depth', -1)
         min_child_samples = hyper_kwargs.get('min_child_samples', 20)
@@ -34,7 +34,7 @@ def cross_validation(features, target, metric, mdl=None, n_splits=10, shuffle=Tr
         if verbose:
             print('LGBM Regressor chosen')
 
-    elif issubclass(mdl, RandomForestRegressor):
+    elif isinstance(mdl, RandomForestRegressor):
         max_depth = hyper_kwargs.get('max_depth', None)
         n_estimators = hyper_kwargs.get('n_estimators', 100)
         min_samples_split = hyper_kwargs.get('min_samples_split', 2)
