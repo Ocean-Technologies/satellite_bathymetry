@@ -12,14 +12,11 @@ import ee
 from glob import glob
 import tifffile
 from preprocessing import ndwi, get_coord_from_pixel_pos, get_pixel_from_coord
-from sklearn.preprocessing import train_test_split
-
 
 #private_key = os.environ.get('EE_PRIVATE_KEY')
 
 s3_client = boto3.client('s3')
 s3r = boto3.resource('s3')
-
 
 
 def medianValueAtPixel(px,py,image):
@@ -176,19 +173,27 @@ def data_acquisition(request, ctx):
     print('upload to bucket df bat csv')
     df_pixel_coord_bat_data_mean_name = f'{project_id}/df_bat.csv'
     
-    # TODO check how is the sagemaker input format
-    features = df_pixel_coord_bat_data_mean.drop(['x', 'y', 'z'], axis=1)
-    target = df_pixel_coord_bat_data_mean.z
+    # TODO check how is the sagemaker input format, DEPENDENCY FEATURE MUST BE THE FIRST COLUMN
+    dataset = df_pixel_coord_bat_data_mean.drop(['x', 'y'], axis=1)
     
-    X_train, X_val, y_train, y_val = train_test_split(features, target, random_state=42, test_size=0.3)
+    train_data, test_data = np.split(dataset.sample(frac=1, random_state=42), [int(0.7 * len(dataset))])
+    train_data_name = f'{project_id}/train.csv'
+    test_data_name = f'{project_name}/test.csv'
 
     csv_buffer_bat = io.StringIO()
+    train_buffer = io.StringIO()
+    test_buffer = io.StringIO()
     
-    #csv_buffer_train = io.StringIO()
-    #csv_buffer_val = io.StringIO()
+    # Format train dataframe to: dependency feature (target) | remaining features. And save on buffer
+    pd.concat([train_data['z'], train_data.drop('z', axis=1)], axis=1).to_csv(train_buffer, index=False)
+    # Format test dataframe to: dependency feature (target) | remaining features
+    pd.concat([test_data['z'], test_data.drop('z', axis=1)], axis=1).to_csv(test_buffer, index=False)
+
     df_pixel_coord_bat_data_mean.to_csv(csv_buffer_bat, index=None)
     try:
         s3r.Object(bucket_name, df_pixel_coord_bat_data_mean_name).put(Body=csv_buffer_bat.getvalue())
+        s3r.Object(bucket_name, train_data_name).put(Body=train_buffer.getvalue())
+        s3r.Object(bucket_name, test_data_name).put(Body=test_buffer.getvalue())
     except Exception as e:
         print(e)
         return {
