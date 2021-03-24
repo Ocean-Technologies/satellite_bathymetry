@@ -53,6 +53,10 @@ class Model(db.Model):
         db.String(300),
         nullable=False
     )
+    status = db.Column(
+        db.String(20),
+        nullable=False
+    )
     user_id = db.Column(
         db.Integer,
         db.ForeignKey('user.id'),

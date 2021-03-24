@@ -71,12 +71,11 @@ def data_acquisition(request, ctx):
     os.remove(file_name_zip)
 
     print("Creating bands dict")
-    project_id = str(uuid.uuid4()).replace('-', '')
+    project_id = request['project_id'] #str(uuid.uuid4()).replace('-', '')
 
     path_data = '/tmp/'
     bands_list = [e for e in glob(str(path_data)+'/*') if e.endswith('.tif')]
     bands_list.sort()
-    
 
     bands_dict = {}
     for i, e in enumerate(bands_list):
@@ -147,6 +146,9 @@ def data_acquisition(request, ctx):
         s3r.Object(bucket_name, df_all_image_name).put(Body=csv_buffer_all.getvalue())
     except Exception as e:
         print(e)
+        request['model_is_created'] = False
+
+        return request
 
     del df_all_image
 
@@ -204,10 +206,7 @@ def data_acquisition(request, ctx):
                 "msg": "Some error msg"
             })
         }
-
-    response = {
-        "project_id": project_id,
-        "df_bat_path": df_pixel_coord_bat_data_mean_name,
-        "df_all_image_path": df_all_image_name,
-        "s3_bucket_name": bucket_name
-    }
+    
+    request['train_data_path'] = df_pixel_coord_bat_data_mean_name
+    
+    return request
