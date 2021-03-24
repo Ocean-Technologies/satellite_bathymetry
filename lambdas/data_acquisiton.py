@@ -174,26 +174,28 @@ def data_acquisition(request, ctx):
     df_pixel_coord_bat_data_mean_name = f'{project_id}/df_bat.csv'
     
     # TODO check how is the sagemaker input format, DEPENDENCY FEATURE MUST BE THE FIRST COLUMN
-    dataset = df_pixel_coord_bat_data_mean.drop(['x', 'y'], axis=1)
+    #dataset = df_pixel_coord_bat_data_mean.drop(['x', 'y'], axis=1)
     
+    """
     train_data, test_data = np.split(dataset.sample(frac=1, random_state=42), [int(0.7 * len(dataset))])
     train_data_name = f'{project_id}/train.csv'
     test_data_name = f'{project_name}/test.csv'
-
-    csv_buffer_bat = io.StringIO()
     train_buffer = io.StringIO()
     test_buffer = io.StringIO()
+    """
+
+    csv_buffer_bat = io.StringIO()
     
     # Format train dataframe to: dependency feature (target) | remaining features. And save on buffer
-    pd.concat([train_data['z'], train_data.drop('z', axis=1)], axis=1).to_csv(train_buffer, index=False)
+    #pd.concat([train_data['z'], train_data.drop('z', axis=1)], axis=1).to_csv(train_buffer, index=False)
     # Format test dataframe to: dependency feature (target) | remaining features
-    pd.concat([test_data['z'], test_data.drop('z', axis=1)], axis=1).to_csv(test_buffer, index=False)
+    #pd.concat([test_data['z'], test_data.drop('z', axis=1)], axis=1).to_csv(test_buffer, index=False)
 
     df_pixel_coord_bat_data_mean.to_csv(csv_buffer_bat, index=None)
     try:
         s3r.Object(bucket_name, df_pixel_coord_bat_data_mean_name).put(Body=csv_buffer_bat.getvalue())
-        s3r.Object(bucket_name, train_data_name).put(Body=train_buffer.getvalue())
-        s3r.Object(bucket_name, test_data_name).put(Body=test_buffer.getvalue())
+        #s3r.Object(bucket_name, train_data_name).put(Body=train_buffer.getvalue())
+        #s3r.Object(bucket_name, test_data_name).put(Body=test_buffer.getvalue())
     except Exception as e:
         print(e)
         return {
@@ -204,7 +206,8 @@ def data_acquisition(request, ctx):
         }
 
     response = {
+        "project_id": project_id,
         "df_bat_path": df_pixel_coord_bat_data_mean_name,
         "df_all_image_path": df_all_image_name,
-        "s3_bucket_name": bucket_name,
+        "s3_bucket_name": bucket_name
     }
