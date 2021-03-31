@@ -2,6 +2,7 @@ import json
 import pymysql
 import sqlalchemy
 from sqlalchemy import create_engine
+import os
 
 
 conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}@{os.environ['RDS_HOSTNAME']}:{os.environ['RDS_PORT']}/{os.environ['RDS_DB_NAME']}"
@@ -13,7 +14,7 @@ def get_models(user_id):
     connection = engine.connect()
 
     query_user_models = """
-    SELECT FROM models WHERE user_id='{}'
+    SELECT id, created, name, s3_mdl_path, status FROM model where user_id='{}';
     """.format(user_id)
 
     results = [dict(row) for row in connection.execute(query_user_models).fetchall()]
@@ -59,4 +60,6 @@ def lambda_handler(event, context):
         return {
             'statusCode': 400,
             'body': json.dumps('Invalid request')
-        }   
+        }
+    
+        
