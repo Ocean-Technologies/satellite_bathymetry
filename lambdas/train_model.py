@@ -12,19 +12,24 @@ s3_client = boto3.client('s3')
 s3r = boto3.resource('s3')
 
 def train_model(request, context):
-
-    if not request.get('model_is_created'):
+    
+    if not request.get('model_creating'):
         return request
 
     # Read bathymetry data from s3
     bucket_name = os.environ.get('S3_BUCKET_NAME')
-    project_id = request['project_id']
-    model_path = f'{project_id}/lgbm_model.pkl.z'
+    s3_model_path = request['s3_mdl_path']
+    model_path = f'{s3_model_path}/lgbm_model.pkl.z'
 
-    resp_train = s3_client.get_object(Bucket=bucket_name, Key=request['train_data_path'])
-    df = pd.read_csv(resp_train['Body'], sep=',')
+    try:
+        resp_train = s3_client.get_object(Bucket=bucket_name, Key=request['train_data_path'])
+        df = pd.read_csv(resp_train['Body'], sep=',')
+    except Exception as e:
+        request['model_creating'] = False
+        return request
+
     # split into train and validation
-    train_data, val_data = np.split(df.sample(frac=1, random_state=42), [int(0.7 * len(dataset))])
+    train_data, val_data = np.split(df.sample(frac=1, random_state=42), [int(0.7 * len(df))])
 
     features_train = train_data.drop('z', axis=1)
     target_train = train_data['z']
@@ -46,36 +51,46 @@ def train_model(request, context):
                         random_state=0, class_weight='balanced', n_jobs=6)
 
     # Train model
+    print('Training Model LGBM')
     lgbm.fit(features_train, target_train)
     # Predict to val data
+    print("Predicting")
     p_lgbm = lgbm.predict(features_val)
 
     # Extract metrics
-    r2_score = r2_score(target_val, p_lgbm)
+    print('Extracting metrics')
+    r2 = r2_score(target_val, p_lgbm)
     mae = mean_absolute_error(target_val, p_lgbm)
     mse = mean_squared_error(target_val, p_lgbm)
 
     metrics_buffer = io.StringIO()
     metrics_df = pd.DataFrame([{"r2 Score": r2, 'Mean Absolute Error': mae, "Mean Squared Error": mse}])
     metrics_df.to_csv(metrics_buffer, index=None)
-    metrics_path = f'{project_id}/metrics.csv'
-
+    metrics_path = f'{s3_model_path}/metrics.csv'
+    
+    print('Uploading metrics to s3')
     # Upload metrics df to csv
     try:
         s3r.Object(bucket_name, metrics_path).put(Body=metrics_buffer.getvalue())
     except Exception as e:
         print(e)
-        request['model_is_created'] = False
+        request['model_creating'] = False
 
         return request
-
+    
     # Write model into bucket
-    with tempfile.TemporaryFile() as fp:
-        joblib.dump(lgbm, fp)
-        fp.seek(0)
-        s3r.put_object(Body=fp.read(), Bucket=bucket_name, Key=model_path)
+    print('Writing model into s3')
+    try:
+        with tempfile.TemporaryFile() as fp:
+            joblib.dump(lgbm, fp)
+            fp.seek(0)
+            s3r.Object(bucket_name, model_path).put(Body=fp.read())
 
-    request['model_is_created'] = True
+    except Exception as e:
+        request['model_creating'] = False
+        return request
+
+    request['model_creating'] = True
 
     return request
 

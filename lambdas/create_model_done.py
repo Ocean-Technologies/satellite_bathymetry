@@ -2,6 +2,7 @@ import json
 import pymysql
 import sqlalchemy
 from sqlalchemy import create_engine
+import os
 
 
 conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}@{os.environ['RDS_HOSTNAME']}:{os.environ['RDS_PORT']}/{os.environ['RDS_DB_NAME']}"
@@ -17,7 +18,7 @@ def create_model_done(request, context):
         'active',
         request['model_id']
     )
-    connection.execute(query_insert_model)
+    connection.execute(query_update_model)
     connection.close()
 
     return {

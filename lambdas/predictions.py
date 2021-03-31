@@ -59,6 +59,4 @@ def lambda_handler(event, context):
         return {
             'statusCode': 400,
             'body': json.dumps('Invalid request')
-        }
-    
-        
+        }   

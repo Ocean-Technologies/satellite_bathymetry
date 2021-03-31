@@ -1,0 +1,42 @@
+{
+    "Comment": "Train Model Process",
+    "StartAt": "DataAcquisition",
+    "States": {
+      "DataAcquisition": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:DataAcquisition",
+        "Next": "TrainModel"
+      },
+      "TrainModel": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:TrainModel",
+        "Next": "CheckStatus"
+      },
+      "CheckStatus": {
+          "Type": "Choice",
+          "Choices": [
+              {
+                  "Variable": "$.model_creating",
+                  "BooleanEquals": true,
+                  "Next": "CreateModelDone"
+              },
+              {
+                  "Variable": "$.model_creating",
+                  "BooleanEquals": false,
+                  "Next": "AbortCreateModel"
+              }
+          ],
+          "Default": "AbortCreateModel"
+      },
+      "AbortCreateModel": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:AbortCreateModel",
+        "End": true
+      },
+      "CreateModelDone": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:CreateModelDone",
+        "End": true
+      }
+    }
+  }

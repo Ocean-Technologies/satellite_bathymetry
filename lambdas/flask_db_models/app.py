@@ -59,7 +59,6 @@ class Model(db.Model):
     )
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey('user.id'),
         nullable=False
     )
 
@@ -93,7 +92,6 @@ class Prediction(db.Model):
     )
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey('user.id'),
         nullable=False
     )
     model_id = db.Column(

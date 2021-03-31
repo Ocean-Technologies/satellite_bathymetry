@@ -13,12 +13,23 @@ from glob import glob
 import tifffile
 from preprocessing import ndwi, get_coord_from_pixel_pos, get_pixel_from_coord
 
-#private_key = os.environ.get('EE_PRIVATE_KEY')
 
 s3_client = boto3.client('s3')
 s3r = boto3.resource('s3')
 
 
+credentials_dict = credentials_dict = {
+  "type": "service_account",
+  "project_id": os.environ.get('PROJECT_ID'),
+  "private_key_id": os.environ.get('PRIVATE_KEY_ID'),
+  "private_key": os.environ.get('PRIVATE_KEY'),
+  "client_email": os.environ.get('CLIENT_EMAIL'),
+  "client_id": os.environ.get('CLIENT_ID'),
+  "auth_uri": os.environ.get('AUTH_URI'),
+  "token_uri": os.environ.get('TOKEN_URI'),
+  "auth_provider_x509_cert_url": os.environ.get('AUTH_PROVIDER_X509_CERT_URL'),
+  "client_x509_cert_url": os.environ.get('CLIENT_X509_CERT_URL')
+}
 def medianValueAtPixel(px,py,image):
     p = list()
     for i in range(7):
@@ -34,6 +45,8 @@ def data_acquisition(request, ctx):
     global s3_client
     global s3r
     global credentials_dict
+    
+    service_account = credentials_dict['client_email']
 
     with open('/tmp/ee_private_key.json', 'w') as f:
         json.dump(credentials_dict, f, indent=4)
@@ -44,34 +57,40 @@ def data_acquisition(request, ctx):
 
     sentinel_dataset  = ee.ImageCollection("COPERNICUS/S2")
 
-    cordinates = ee.Geometry.Polygon(request['coordinates'])
+    coordinates = ee.Geometry.Polygon(request['coordinates'])
     start_date = request['start_date']
     end_date = request['end_date']
     bucket_name = 'sentinel-cassie'
     raw_bat_path = request['raw_bat_path']
 
-    sentinel_roi = sentinel_dataset.filterBounds(cordinates).filterDate(start_date, end_date).select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'])
+    sentinel_roi = sentinel_dataset.filterBounds(coordinates).filterDate(start_date, end_date).select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'])
     mosaic = sentinel_roi.mosaic()
 
-    params = {"scale":25, "region":cordinates, "filePerBand":True}
+    #params = {"scale":25, "region":coordinates, "filePerBand":True}
+    params = {"scale": 25, 'crs': 'EPSG:32722', "region": coordinates, "filePerBand":True}
 
-    print('Downloading images')
-    url = mosaic.getDownloadURL(params)
-    r = requests.get(url, stream=True)
+    try:
+        print('Downloading images')
+        url = mosaic.getDownloadURL(params)
+        r = requests.get(url, stream=True)
 
-    file_name_zip = '/tmp/filename.zip'
-    filename = '/tmp/mosaic'
-    with open(file_name_zip, "wb") as fd:
-        for chunk in r.iter_content(chunk_size=1024):
-            fd.write(chunk)
+        file_name_zip = '/tmp/filename.zip'
+        filename = '/tmp/mosaic'
+        with open(file_name_zip, "wb") as fd:
+            for chunk in r.iter_content(chunk_size=1024):
+                fd.write(chunk)
 
-    z = zipfile.ZipFile(file_name_zip)
-    z.extractall(os.path.dirname(filename))
-    z.close()
-    os.remove(file_name_zip)
+        z = zipfile.ZipFile(file_name_zip)
+        z.extractall(os.path.dirname(filename))
+        z.close()
+        os.remove(file_name_zip)
+    except Exception as e:
+        print(e)
+        request['model_creating'] = False
+        return request
 
     print("Creating bands dict")
-    project_id = request['project_id'] #str(uuid.uuid4()).replace('-', '')
+    s3_mdl_path = request['s3_mdl_path'] #str(uuid.uuid4()).replace('-', '')
 
     path_data = '/tmp/'
     bands_list = [e for e in glob(str(path_data)+'/*') if e.endswith('.tif')]
@@ -139,22 +158,27 @@ def data_acquisition(request, ctx):
     df_all_image.to_csv(csv_buffer_all, index=None)
 
     # Read raw bat dataframe from s3 bucket
-    df_all_image_name = f'{project_id}/df_all_image.csv'
+    df_all_image_name = f'{s3_mdl_path}/df_all_image.csv'
 
     print('upload to bucket df all csv')
     try:
         s3r.Object(bucket_name, df_all_image_name).put(Body=csv_buffer_all.getvalue())
     except Exception as e:
         print(e)
-        request['model_is_created'] = False
+        request['model_creating'] = False
 
         return request
 
     del df_all_image
 
-    resp = s3_client.get_object(Bucket=bucket_name, Key=raw_bat_path)
-    df_raw_bat = pd.read_csv(resp['Body'], sep=' ', header=None)
-    df_raw_bat.columns = ['x', 'y', 'z']
+    # Read raw bathymetry file from s3, must be on X, Y, Z format with this column order
+    try:
+        resp = s3_client.get_object(Bucket=bucket_name, Key=raw_bat_path)
+        df_raw_bat = pd.read_csv(resp['Body'], sep=' ', header=None)
+        df_raw_bat.columns = ['x', 'y', 'z']
+    except Exception as e:
+        print(e)
+        request['model_creating'] = False
 
     df_pixel_coord_bat_data = pd.DataFrame()
     df_pixel_coord_bat_data['x'] = df_raw_bat['x'].apply(lambda x: int((x-utm_long)/float(scale_x)))
@@ -173,26 +197,10 @@ def data_acquisition(request, ctx):
     del df_pixel_coord_bat_data
 
     print('upload to bucket df bat csv')
-    df_pixel_coord_bat_data_mean_name = f'{project_id}/df_bat.csv'
+    df_pixel_coord_bat_data_mean_name = f'{s3_mdl_path}/df_bat.csv'
     
-    # TODO check how is the sagemaker input format, DEPENDENCY FEATURE MUST BE THE FIRST COLUMN
-    #dataset = df_pixel_coord_bat_data_mean.drop(['x', 'y'], axis=1)
-    
-    """
-    train_data, test_data = np.split(dataset.sample(frac=1, random_state=42), [int(0.7 * len(dataset))])
-    train_data_name = f'{project_id}/train.csv'
-    test_data_name = f'{project_name}/test.csv'
-    train_buffer = io.StringIO()
-    test_buffer = io.StringIO()
-    """
-
+    # Upload bathymetry with bands reflectances to s3
     csv_buffer_bat = io.StringIO()
-    
-    # Format train dataframe to: dependency feature (target) | remaining features. And save on buffer
-    #pd.concat([train_data['z'], train_data.drop('z', axis=1)], axis=1).to_csv(train_buffer, index=False)
-    # Format test dataframe to: dependency feature (target) | remaining features
-    #pd.concat([test_data['z'], test_data.drop('z', axis=1)], axis=1).to_csv(test_buffer, index=False)
-
     df_pixel_coord_bat_data_mean.to_csv(csv_buffer_bat, index=None)
     try:
         s3r.Object(bucket_name, df_pixel_coord_bat_data_mean_name).put(Body=csv_buffer_bat.getvalue())
@@ -200,13 +208,10 @@ def data_acquisition(request, ctx):
         #s3r.Object(bucket_name, test_data_name).put(Body=test_buffer.getvalue())
     except Exception as e:
         print(e)
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "msg": "Some error msg"
-            })
-        }
+        request['model_creating'] = False
+        return request
     
     request['train_data_path'] = df_pixel_coord_bat_data_mean_name
+    request['model_creating'] = True
     
     return request

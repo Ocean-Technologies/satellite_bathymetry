@@ -21,9 +21,9 @@ def abort_create_model(request, context):
         connection.execute(query_delete_model)
     
     # Remove model folder from s3
-    if request.get('project_id'):
-        s3_bucket_name = os.environ.get('S3_BUCKET_NAME')
-        s3_response = s3_client.list_objects_v2(Bucket=s3_bucket_name, Prefix=request['project_id'])
+    if request.get('s3_mdl_path'):
+        s3_bucket_name = os.environ.get('s3_bucket_name')
+        s3_response = s3_client.list_objects_v2(Bucket=s3_bucket_name, Prefix=request['s3_mdl_path'])
         if 'Contents' in s3_response:
             for obj in s3_response['Contents']:
                 print('Deleting', obj['Key'])
