@@ -6,6 +6,7 @@ import joblib
 import tempfile
 import os
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from sklearn.model_selection import train_test_split
 import io
 
 s3_client = boto3.client('s3')
@@ -16,26 +17,24 @@ def train_model(request, context):
     if not request.get('model_creating'):
         return request
 
-    # Read bathymetry data from s3
     bucket_name = os.environ.get('S3_BUCKET_NAME')
     s3_model_path = request['s3_mdl_path']
     model_path = f'{s3_model_path}/lgbm_model.pkl.z'
 
+    # Read bathymetry data from s3
     try:
         resp_train = s3_client.get_object(Bucket=bucket_name, Key=request['train_data_path'])
         df = pd.read_csv(resp_train['Body'], sep=',')
+        resp_all_image = s3_client.get_object(Bucket=bucket_name, Key=request['all_image_path'])
+        df_all_image = pd.read_csv(resp_all_image['Body'], sep=',')
     except Exception as e:
         request['model_creating'] = False
         return request
 
+    new_df = pd.merge(df, df_all_image, how='left', left_on=['x', 'y'], right_on=['pixel_x', 'pixel_y']).dropna(inplace=True)
+
     # split into train and validation
-    train_data, val_data = np.split(df.sample(frac=1, random_state=42), [int(0.7 * len(df))])
-
-    features_train = train_data.drop('z', axis=1)
-    target_train = train_data['z']
-
-    features_val = val_data.drop('z', axis=1)
-    target_val = val_data['z']
+    X_train, X_val, y_train, y_val = train_test_split(new_df.drop(['x', 'y', 'z'], axis=1), new_df['z'], test_size=0.3, random_state=42)
 
     args_lgbm = [0.06189835094365267, 9, 1, 0.8695551533271082, 0.6534274736020848, 976, 2, 1]
     lr = args_lgbm[0]
@@ -52,16 +51,16 @@ def train_model(request, context):
 
     # Train model
     print('Training Model LGBM')
-    lgbm.fit(features_train, target_train)
+    lgbm.fit(X_train, y_train)
     # Predict to val data
     print("Predicting")
-    p_lgbm = lgbm.predict(features_val)
+    p_lgbm = lgbm.predict(X_val)
 
     # Extract metrics
     print('Extracting metrics')
-    r2 = r2_score(target_val, p_lgbm)
-    mae = mean_absolute_error(target_val, p_lgbm)
-    mse = mean_squared_error(target_val, p_lgbm)
+    r2 = r2_score(y_val, p_lgbm)
+    mae = mean_absolute_error(y_val, p_lgbm)
+    mse = mean_squared_error(y_val, p_lgbm)
 
     metrics_buffer = io.StringIO()
     metrics_df = pd.DataFrame([{"r2 Score": r2, 'Mean Absolute Error': mae, "Mean Squared Error": mse}])
@@ -93,9 +92,3 @@ def train_model(request, context):
     request['model_creating'] = True
 
     return request
-
-
-
-
-
-

@@ -31,7 +31,7 @@ def start_model_train(event, context):
     start_date = request.get('start_date')
     end_date = request.get('end_date')
     model_name = request.get('model_name')
-    user_id = request.get('user_id')
+    user_email = request.get('user_email')
     request['s3_mdl_path'] = str(uuid.uuid4()).replace('-', '')
 
     if coordinates is None or start_date is None or end_date is None:
@@ -45,10 +45,10 @@ def start_model_train(event, context):
     connection = engine.connect()
 
     query_check_model = """
-    SELECT id FROM model WHERE name='{}' and user_id='{}'
+    SELECT id FROM model WHERE name='{}' and user_email='{}'
     """.format(
         model_name,
-        user_id
+        user_email
     )
     
     model_exists = connection.execute(query_check_model).fetchone()
@@ -62,14 +62,14 @@ def start_model_train(event, context):
         }
 
     query_insert_model = """
-    INSERT INTO model (created, name, s3_mdl_path, status, user_id)
+    INSERT INTO model (created, name, s3_mdl_path, status, user_email)
     VALUES ('{}', '{}', '{}', '{}', '{}')
     """.format(
         datetime.utcnow(),
         request['model_name'],
         request['s3_mdl_path'],
         'creating',
-        request['user_id']
+        request['user_email']
     )
     connection.execute(query_insert_model)
     model_id = result.lastrowid

@@ -14,25 +14,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = conn_string
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-class User(db.Model):
-    __tablename__ = 'user'
-    id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
-    google_id = db.Column(
-        db.Integer, # use this as pk?
-        nullable=True, # change to false?
-    )
-    email = db.Column(
-        db.String(300),
-        nullable=False
-    )
-    s3_user_folder = db.Column(
-        db.String(300),
-        nullable=False
-    )
-
 
 class Model(db.Model):
     __tablename__ = 'model'
@@ -57,8 +38,8 @@ class Model(db.Model):
         db.String(20),
         nullable=False
     )
-    user_id = db.Column(
-        db.Integer,
+    user_email = db.Column(
+        db.String(100),
         nullable=False
     )
 
