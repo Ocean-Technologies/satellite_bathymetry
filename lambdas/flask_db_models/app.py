@@ -59,19 +59,15 @@ class Prediction(db.Model):
         db.String(300),
         nullable=False
     )
-    s3_forecast_path = db.Column(
+    s3_prediction_path = db.Column(
         db.String(300),
         nullable=False
     )
-    start_date = db.Column(
-        db.DateTime,
-        nullable=False,
+    status = db.Column(
+        db.String(20),
+        nullable=False
     )
-    end_date = db.Column(
-        db.DateTime,
-        nullable=False,
-    )
-    user_id = db.Column(
+    user_email = db.Column(
         db.Integer,
         nullable=False
     )

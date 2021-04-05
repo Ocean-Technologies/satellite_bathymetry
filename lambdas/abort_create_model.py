@@ -3,11 +3,11 @@ import pymysql
 import sqlalchemy
 from sqlalchemy import create_engine
 import os
-import boto3
+#import boto3
 
 conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}@{os.environ['RDS_HOSTNAME']}:{os.environ['RDS_PORT']}/{os.environ['RDS_DB_NAME']}"
 engine = create_engine(conn_string)
-s3_client = boto3.client('s3')
+#s3_client = boto3.client('s3')
 
 def abort_create_model(request, context):
 
@@ -17,7 +17,7 @@ def abort_create_model(request, context):
     if request.get('model_id'):
         query_delete_model = """
         DELETE FROM model WHERE id='{}'
-        """.format(model_id)
+        """.format(request['model_id'])
         connection.execute(query_delete_model)
     
     # Remove model folder from s3
@@ -35,4 +35,3 @@ def abort_create_model(request, context):
             "Create model aborted"
         )
     }
-

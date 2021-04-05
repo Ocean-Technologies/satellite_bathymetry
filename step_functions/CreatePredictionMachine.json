@@ -1,0 +1,37 @@
+{
+    "Comment": "Create Prediction Machine",
+    "StartAt": "AcquisitionAndPrediction",
+    "States": {
+      "AcquisitionAndPrediction": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:AcquisitionAndPrediction",
+        "Next": "CheckStatus"
+      },
+      "CheckStatus": {
+          "Type": "Choice",
+          "Choices": [
+              {
+                  "Variable": "$.prediction_creating",
+                  "BooleanEquals": true,
+                  "Next": "CreatePredictionDone"
+              },
+              {
+                  "Variable": "$.prediction_creating",
+                  "BooleanEquals": false,
+                  "Next": "AbortCreatePrediction"
+              }
+          ],
+          "Default": "AbortCreatePrediction"
+      },
+      "AbortCreatePrediction": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:AbortCreatePrediction",
+        "End": true
+      },
+      "CreatePredictionDone": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:sa-east-1:457581096601:function:CreatePredictionDone",
+        "End": true
+      }
+    }
+  }
