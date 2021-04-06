@@ -18,30 +18,6 @@ s3_client = boto3.client('s3')
 s3r = boto3.resource('s3')
 
 
-credentials_dict = {
-  "type": "service_account",
-  "project_id": "geeapi-307822",
-  "private_key_id": "f20399d49751ea96b3fa9710ad648ffae0e7d6f4",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCqrrmmEqUTJndd\nE4LpSisBj+BF+xLkMk7g+yjmmJU8yK9mxsXfxJMCAXeZqd0TIsVpQAKOk/jDfR8P\nCI7PRACXwYPTo49G9nTTIwIWMPUM3TfkuvTB6xuTwIAQixGp2Omep5n4rZFLSlyf\nu454I+m9WFsrCm/tWJ2gdczmyZmhgELXPc4+/DDp50E8/rfyP8iEyyyyCs1rAnNx\nCK7VPj7yL6F6Pa6WX5Mjwg3CDsz4KUbIOlJjLyVK+N1EOpgc/kAqBZ/37uY8iXyk\naUmO6iN6MytDtdpkEvVQYTS9kdQn+LeMOndBc7gngkhZzIay/Y+l3e1a5AOKnBT+\nV9Rf9F3ZAgMBAAECggEAISFTNdIuqp3v02hDI+dam64CuXK3wwWk2/TEhqYdabQG\nn+t7Yyjz5BLG1VPsbpd0PC7JkEVWpxN1YOSnW8H2X36XiRAZcovKN2V3NTmBh2K1\nQ7eqZK2vJ6nY8d0cq5xIFJyxvVxrdHLVscelKtrFtxQcdilLeoWV6xySjkWZhYhf\nyWqq+1JttZtRm/cE/x76JAL77FizNEDIMisfetO/AOF2Pgb1xtECUG6+h3BPW/05\nx8M1nHGqUg5uam5Oy+101CUQw4LUYZPpEgJ7ME0AS4WaxyH8Ug+lnVmIUw2ImpsL\ndTUoZoEINbst7E41hOozIqOcHQYmA1qYDjEE72y2dQKBgQDTbjAh42FFg0RMtEEd\nnCWivFSGgmpvCBmol6Tp3TJtob/zLo+STm7g56ds1TmFW1RtxWKOlf+jk1qmkNpX\nuSSTtfU2M1RIfe9qyCxkYaR22aLFT0DVsORX+Doh97HkNznoJvcjHbJzRJ8RSwXb\nKVZCF4rL6sFziqLMuzN+RZYAnwKBgQDOqZUkMpqYz3urHYa+vPpD/V4ULaRIJmqQ\neEi1nXuSHJEay6VXG8rCbQZYHLEUklW/dB9HXENamfW+lQOdf/+7wXvrIogk82wI\nXQBl2vsAZMwUo2bNMkmG919TuNt026RiwpEJPoLuGGj81CGntiyGME9AaqLF5ww7\nJUavkPe2hwKBgCZwcwnGOCoWKnWzk98ZQ3JpwQhPb6BOHbQcFdx63a826BoDThDw\nd5ImK7dKsNGBAEGQ0FFSDg8kPCfqT/gA7hh4zWMUQ++GDeAhEokRg4AkI0ayGPyA\n05L2y0LfsJToQXvmkantvULdp/nR5PeqdUdA1ngqbw9dlimYo00Cw7nLAoGAGhDV\nmM0xJpj01i5RMnmPb0fjt9PR5q/BvRsOwKluTo1/18tbvVLqDf/GTxK/WwLiAdXZ\npByE+kZ08mbFH/ZnAP10bcHbPh3dwGhKho5KHlCYVPoPG05+a6GDyoGEXIbfgv1b\nYbkatoEprMnsvMSDdSFevZc1lJSBvGwFMFuugr0CgYA6v03AK8hGYGMerNlAXRRv\nEftENzm7+B0p+RvcYtWqq1djwQgDBtj59aEqzTcuYqL358c8TJmt9H5G//KK+kCt\nqmDjlnl71FE5XLlSsVCnLOMAX8Uzpuhu3RPqAWSENJaUtit8YVOXaRm/+1hNMijt\n7BTdMA4CaW7AkQ9cLiJb+g==\n-----END PRIVATE KEY-----\n",
-  "client_email": "cassiesentinel@geeapi-307822.iam.gserviceaccount.com",
-  "client_id": "111696626366876739612",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/cassiesentinel%40geeapi-307822.iam.gserviceaccount.com"
-}
-
-def medianValueAtPixel(px,py,image):
-    p = list()
-    for i in range(7):
-        for j in range(7):
-            y_index = py-3+i
-            x_index = px-3+j
-            if(y_index >= 0 and y_index < image.shape[0] and x_index >= 0 and x_index < image.shape[1]):
-                p.append(image[y_index][x_index])
-    return np.median(p)
-
-
 def data_acquisition(request, ctx):
     global s3_client
     global s3r
@@ -64,7 +40,9 @@ def data_acquisition(request, ctx):
 
     # TODO ADD THIS TO REQUEST
     deserilizer = ee.deserializer.fromJSON(request['gee_image_data'])
-    image = ee.Image(deserilizer)
+    single_image = ee.Image(deserilizer)
+
+    image = single_image.reduceNeighborhood(ee.Reducer.median(),ee.Kernel.square(150, 'meters'))
 
     #params = {"scale":25, "region":coordinates, "filePerBand":True}
     params = {"scale": 25, "filePerBand":True, "crs": "EPSG:4326"}
@@ -144,7 +122,8 @@ def data_acquisition(request, ctx):
         for row in df_masked.itertuples():
             px = row.pixel_x
             py = row.pixel_y
-            aux.append(medianValueAtPixel(px, py, v))
+            #aux.append(medianValueAtPixel(px, py, v))
+            aux.append(v[py][px])
         df_masked[k] = aux
 
 

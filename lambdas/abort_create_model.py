@@ -3,11 +3,11 @@ import pymysql
 import sqlalchemy
 from sqlalchemy import create_engine
 import os
-#import boto3
+import boto3
 
 conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}@{os.environ['RDS_HOSTNAME']}:{os.environ['RDS_PORT']}/{os.environ['RDS_DB_NAME']}"
 engine = create_engine(conn_string)
-#s3_client = boto3.client('s3')
+s3_client = boto3.client('s3')
 
 def abort_create_model(request, context):
 
@@ -22,7 +22,7 @@ def abort_create_model(request, context):
     
     # Remove model folder from s3
     if request.get('s3_mdl_path'):
-        s3_bucket_name = os.environ.get('s3_bucket_name')
+        s3_bucket_name = os.environ.get('S3_BUCKET_NAME')
         s3_response = s3_client.list_objects_v2(Bucket=s3_bucket_name, Prefix=request['s3_mdl_path'])
         if 'Contents' in s3_response:
             for obj in s3_response['Contents']:

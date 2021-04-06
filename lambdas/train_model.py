@@ -25,16 +25,13 @@ def train_model(request, context):
     try:
         resp_train = s3_client.get_object(Bucket=bucket_name, Key=request['train_data_path'])
         df = pd.read_csv(resp_train['Body'], sep=',')
-        resp_all_image = s3_client.get_object(Bucket=bucket_name, Key=request['all_image_path'])
-        df_all_image = pd.read_csv(resp_all_image['Body'], sep=',')
     except Exception as e:
+        print(e)
         request['model_creating'] = False
         return request
 
-    new_df = pd.merge(df, df_all_image, how='left', left_on=['x', 'y'], right_on=['pixel_x', 'pixel_y']).dropna(inplace=True)
-
     # split into train and validation
-    X_train, X_val, y_train, y_val = train_test_split(new_df.drop(['x', 'y', 'z'], axis=1), new_df['z'], test_size=0.3, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(df.drop(['pixel_x', 'pixel_y', 'lat', 'long', 'z'], axis=1), df['z'], test_size=0.3, random_state=42)
 
     args_lgbm = [0.06189835094365267, 9, 1, 0.8695551533271082, 0.6534274736020848, 976, 2, 1]
     lr = args_lgbm[0]
@@ -86,6 +83,7 @@ def train_model(request, context):
             s3r.Object(bucket_name, model_path).put(Body=fp.read())
 
     except Exception as e:
+        print(e)
         request['model_creating'] = False
         return request
 

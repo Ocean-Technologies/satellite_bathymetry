@@ -14,6 +14,16 @@ conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PA
 engine = create_engine(conn_string)
 
 def start_model_train(event, context):
+    """
+    {
+        user_email: str,
+        model_name: str,
+        gee_image_data: str,
+        raw_bat_path: str,
+        bat_utm_region_code: str,
+        bat_utm_region_letter: str,
+    }
+    """
 
     try:
         request = json.loads(event['body'])
@@ -27,14 +37,11 @@ def start_model_train(event, context):
             })
         }
 
-    coordinates = request.get('coordinates')
-    start_date = request.get('start_date')
-    end_date = request.get('end_date')
     model_name = request.get('model_name')
     user_email = request.get('user_email')
     request['s3_mdl_path'] = str(uuid.uuid4()).replace('-', '')
 
-    if coordinates is None or start_date is None or end_date is None:
+    if model_name is None or user_email is None:
         return {
             "statusCode": 400,
             "body": json.dumps({
@@ -71,7 +78,7 @@ def start_model_train(event, context):
         'creating',
         request['user_email']
     )
-    connection.execute(query_insert_model)
+    result = connection.execute(query_insert_model)
     model_id = result.lastrowid
     request['model_id'] = model_id
 
