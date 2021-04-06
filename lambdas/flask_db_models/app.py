@@ -68,8 +68,8 @@ class Prediction(db.Model):
         nullable=False
     )
     user_email = db.Column(
-        db.Integer,
-        nullable=False
+        db.String(100),
+        nullable=True
     )
     model_id = db.Column(
         db.Integer,
