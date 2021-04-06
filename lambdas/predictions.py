@@ -3,14 +3,19 @@ import pymysql
 import sqlalchemy
 from sqlalchemy import create_engine
 import os
+from datetime import datetime
+import boto3
 
 
 conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}@{os.environ['RDS_HOSTNAME']}:{os.environ['RDS_PORT']}/{os.environ['RDS_DB_NAME']}"
 engine = create_engine(conn_string)
 
+step_client = boto3.client('stepfunctions')
+
 
 def get_models(user_email):
     global engine
+    global step_client
 
     connection = engine.connect()
 
@@ -70,9 +75,9 @@ def generate_predictions(request):
         user_email
     )
 
-    model_exists = connection.execute(query_check_model).fetchone()
+    prediction_exists = connection.execute(query_check_prediction).fetchone()
 
-    if model_exists:
+    if prediction_exists:
         return {
             "statusCode": 400,
             "body": json.dumps({
@@ -82,23 +87,32 @@ def generate_predictions(request):
 
     query_insert_prediction = """
     INSERT INTO prediction (created, name, s3_prediction_path, status, user_email, model_id)
-    VALUES ('{}', '{}', '{}', '{}', '{}')
+    VALUES ('{}', '{}', '{}', '{}', '{}', '{}')
     """.format(
         datetime.utcnow(),
-        request['model_name'],
+        request['prediction_name'],
         request['s3_mdl_path'],
         'creating',
         request['user_email'],
         request['model_id']
     )
-    connection.execute(query_insert_prediction)
+    result = connection.execute(query_insert_prediction)
     prediction_id = result.lastrowid
     request['prediction_id'] = prediction_id
 
     step_response = step_client.start_execution(
-        stateMachineArn='arn:aws:states:sa-east-1:457581096601:stateMachine:TrainModelMachine',
+        stateMachineArn='arn:aws:states:sa-east-1:457581096601:stateMachine:CreatePredictionMachine',
         input=json.dumps(request)
     )
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({
+            "msg": "Creating Prediction, it will take a while."
+        })
+    }
+    
+    
 
 
 def lambda_handler(event, context):
@@ -130,11 +144,10 @@ def lambda_handler(event, context):
                 "statusCode": 400,
                 'body': json.dumps('Invalid request')
             }
-        response_body = generate_predictions(request)
+        response = generate_predictions(request)
+        return response
     else:
         return {
             'statusCode': 400,
             'body': json.dumps('Invalid request')
         }
-    
-        

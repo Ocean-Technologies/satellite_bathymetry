@@ -3,6 +3,7 @@ import pymysql
 import sqlalchemy
 from sqlalchemy import create_engine
 import os
+import json
 
 
 conn_string = f"mysql+pymysql://{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}@{os.environ['RDS_HOSTNAME']}:{os.environ['RDS_PORT']}/{os.environ['RDS_DB_NAME']}"
@@ -13,10 +14,10 @@ def abort_create_prediction(request, context):
     connection = engine.connect()
 
     # Remove forecast from db
-    if request.get('forecast_id'):
+    if request.get('prediction_id'):
         query_delete_forecast = """
-        DELETE FROM forecast WHERE id='{}'
-        """.format(request['forecast_id'])
+        DELETE FROM prediction WHERE id='{}'
+        """.format(request['prediction_id'])
         connection.execute(query_delete_forecast)
 
     return {

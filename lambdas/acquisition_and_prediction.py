@@ -1,10 +1,22 @@
 import pandas as pd
 import numpy as np
 import joblib as jb
-from io import BytesIO
+from io import BytesIO, StringIO
+import boto3
+import json
+import ee
+import requests
+from glob import glob
+import tifffile
+import requests
+import zipfile
+import os
+
+
 
 
 s3_client = boto3.client('s3')
+s3r = boto3.resource('s3')
 
 def ndwi(first_band, second_band):
     """Apply ndwi filter to a pair of images
@@ -22,7 +34,7 @@ def ndwi(first_band, second_band):
 
     output = np.zeros(first_band.shape)
 
-    for i in tqdm(range(first_band.shape[0])):
+    for i in range(first_band.shape[0]):
         for j in range(first_band.shape[1]):
             temp1 = first_band[i][j] - second_band[i][j]
             temp2 = first_band[i][j] + second_band[i][j]
@@ -36,7 +48,7 @@ def ndwi(first_band, second_band):
                 
     return output
 
-def create_predictions(request, context):
+def acquisition_and_prediction(request, context):
     """
     {
         model_id: int,
@@ -89,9 +101,10 @@ def create_predictions(request, context):
     for i, e in enumerate(bands_list):
         bands_dict[f'b{i+1}'] = tifffile.TiffFile(e)
     
-    bands_dict = {}
-    for i, e in enumerate(bands_list):
-        bands_dict[f'b{i+1}'] = tifffile.TiffFile(e)
+    aux_dict = dict()
+    for page in bands_dict['b1'].pages:
+        for tag in page.tags.values():
+            aux_dict[tag.name] = tag.value
     
     scale_long = aux_dict['ModelTransformationTag'][0]
     scale_lat = aux_dict['ModelTransformationTag'][5]
@@ -113,8 +126,6 @@ def create_predictions(request, context):
     aux_dict_df = dict()
     aux_dict_df['coords_x'] = list()
     aux_dict_df['coords_y'] = list()
-    aux_dict_df['pixel_x'] = list()
-    aux_dict_df['pixel_y'] = list()
 
     for k, v in bands_arrays_dict.items():
         print(k)
@@ -137,14 +148,15 @@ def create_predictions(request, context):
 
     # Read raw bat dataframe from s3 bucket
     bucket_name = 'sentinel-cassie'
-    base_path = '{}/{}'.format(request['s3_mdl_path'], 'lgbm_model.pkl.z')
-    df_all_image_name = f'{base_path}/df_all_image.csv'
+    mdl_path = '{}/{}'.format(request['s3_mdl_path'], 'lgbm_model.pkl.z')
+    df_all_image_name = '{}/df_predicion.csv'.format(request['s3_mdl_path'])
+    #df_all_image_name = f'{base_path}/df_all_image.csv'
 
     request['s3_prediction_path'] = df_all_image_name
     # Load model from s3
     try:
         with BytesIO() as f:
-            s3_client.download_fileobj(Bucket='sentinel-cassie', Key=base_path, Fileobj=f)
+            s3_client.download_fileobj(Bucket='sentinel-cassie', Key=mdl_path, Fileobj=f)
             f.seek(0)
             mdl = jb.load(f)
     except Exception as e:
@@ -157,7 +169,7 @@ def create_predictions(request, context):
     df_all_image['z_predict'] = predictions
 
     # Upload df to s3 bucket with uuid path
-    csv_buffer_predictions = io.StringIO()
+    csv_buffer_predictions = StringIO()
     df_all_image.to_csv(csv_buffer_predictions, index=None)
 
     try:
