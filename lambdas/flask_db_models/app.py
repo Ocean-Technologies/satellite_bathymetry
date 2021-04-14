@@ -38,6 +38,18 @@ class Model(db.Model):
         db.String(20),
         nullable=False
     )
+    r2_score = db.Column(
+        db.Float,
+        nullable=True
+    )
+    mean_absolute_error = db.Column(
+        db.Float,
+        nullable=True
+    )
+    mean_squared_error = db.Column(
+        db.Float,
+        nullable=True
+    )
     user_email = db.Column(
         db.String(100),
         nullable=False

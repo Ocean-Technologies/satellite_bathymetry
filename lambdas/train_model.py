@@ -53,27 +53,19 @@ def train_model(request, context):
     print("Predicting")
     p_lgbm = lgbm.predict(X_val)
 
+    request['predictions'] = p_lgbm.tolist()
+    request['y_val'] = y_val.to_list()
+
     # Extract metrics
     print('Extracting metrics')
     r2 = r2_score(y_val, p_lgbm)
     mae = mean_absolute_error(y_val, p_lgbm)
     mse = mean_squared_error(y_val, p_lgbm)
 
-    metrics_buffer = io.StringIO()
-    metrics_df = pd.DataFrame([{"r2 Score": r2, 'Mean Absolute Error': mae, "Mean Squared Error": mse}])
-    metrics_df.to_csv(metrics_buffer, index=None)
-    metrics_path = f'{s3_model_path}/metrics.csv'
-    
-    print('Uploading metrics to s3')
-    # Upload metrics df to csv
-    try:
-        s3r.Object(bucket_name, metrics_path).put(Body=metrics_buffer.getvalue())
-    except Exception as e:
-        print(e)
-        request['model_creating'] = False
+    request['r2_score'] = r2
+    request['mean_absolute_error'] = mae
+    request['mean_squared_error'] = mse
 
-        return request
-    
     # Write model into bucket
     print('Writing model into s3')
     try:

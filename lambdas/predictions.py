@@ -20,7 +20,7 @@ def get_models(user_email):
     connection = engine.connect()
 
     query_user_models = """
-    SELECT id, created, name, s3_mdl_path, status FROM model where user_email='{}';
+    SELECT id, created, name, s3_mdl_path, r2_score, mean_absolute_error, mean_squared_error, status FROM model where user_email='{}';
     """.format(user_email)
 
     results = [dict(row) for row in connection.execute(query_user_models).fetchall()]
@@ -33,7 +33,10 @@ def get_models(user_email):
             "name": dic['name'],
             "created": dic['created'].strftime(format='%Y-%m-%d %H:%M:%S'),
             "s3_mdl_path": dic['s3_mdl_path'],
-            "status": dic['status']
+            "status": dic['status'],
+            "r2_score": dic['r2_score'],
+            "mean_absolute_error": dic['mean_absolute_error'],
+            "mean_squared_error": dic['mean_squared_error']
         }
 
 

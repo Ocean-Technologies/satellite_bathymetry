@@ -13,9 +13,12 @@ def create_model_done(request, context):
     connection = engine.connect()
 
     query_update_model = """
-    UPDATE model SET status='{}' WHERE id='{}'
+    UPDATE model SET status='{}', r2_score='{}', mean_absolute_error='{}', mean_squared_error='{}' WHERE id='{}'
     """.format(
         'active',
+        request['r2_score'],
+        request['mean_absolute_error'],
+        request['mean_squared_error'],
         request['model_id']
     )
     connection.execute(query_update_model)
