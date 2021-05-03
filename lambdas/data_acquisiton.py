@@ -18,6 +18,9 @@ s3_client = boto3.client('s3')
 s3r = boto3.resource('s3')
 
 
+
+
+
 def data_acquisition(request, ctx):
     global s3_client
     global s3r
@@ -35,8 +38,9 @@ def data_acquisition(request, ctx):
     # TODO add this to request -> bat utm region
     bucket_name = 'sentinel-cassie'
     raw_bat_path = request['raw_bat_path']
-    bat_utm_region_code = request['bat_utm_region_code']
-    bat_utm_region_letter = request['bat_utm_region_letter']
+    
+    #bat_utm_region_code = request['bat_utm_region_code']
+    #bat_utm_region_letter = request['bat_utm_region_letter']
 
     # TODO ADD THIS TO REQUEST
     deserilizer = ee.deserializer.fromJSON(request['gee_image_data'])
@@ -44,8 +48,12 @@ def data_acquisition(request, ctx):
 
     image = single_image.reduceNeighborhood(ee.Reducer.median(),ee.Kernel.square(150, 'meters'))
 
+    roi = image.geometry().getInfo()['coordinates'][0]
+    
+    _,_,bat_utm_region_code,bat_utm_region_letter = utm.from_latlon(roi[0][1],roi[0][0])
+    
     #params = {"scale":25, "region":coordinates, "filePerBand":True}
-    params = {"scale": 25, "filePerBand":True, "crs": "EPSG:4326"}
+    params = {"scale": 50, "filePerBand":True, "crs": "EPSG:4326", 'region': roi}
     try:
         print('Downloading images')
         url = image.getDownloadURL(params)
