@@ -7,12 +7,12 @@ s3r = boto3.resource('s3')
 
 def create_validation_charts(request, context):
 
-    y_val = request['y_val']
+    y_true = request['y_true']
     preds = request['predictions']
     s3_model_path = request['s3_mdl_path']
     bucket_name = os.environ.get('S3_BUCKET_NAME')
 
-    sub = [a-b for a, b in zip(y_val, preds)]
+    sub = [a-b for a, b in zip(y_true, preds)]
     # Create residual histogram and correlation plot
     fig,axs = plt.subplots(ncols=2,figsize=(18,8))
     fig.suptitle('BDS Model',fontsize=22)
@@ -25,7 +25,7 @@ def create_validation_charts(request, context):
     axs[1].set_xlabel('Bathymetry',fontsize=16)
     axs[1].set_ylabel('Prediction',fontsize=16)
     axs[0].hist(sub, bins=10)
-    axs[1].plot(y_val,preds,'b.',y_val,y_val,'r')
+    axs[1].plot(y_true,preds,'b.',y_true,y_true,'r')
     axs[0].grid(color='white')
     axs[1].grid(color='white')
     axs[0].spines["right"].set_visible(False)

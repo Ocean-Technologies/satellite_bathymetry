@@ -53,8 +53,8 @@ def train_model(request, context):
     print("Predicting")
     p_lgbm = lgbm.predict(X_val)
 
-    request['predictions'] = p_lgbm.tolist()
-    request['y_val'] = y_val.to_list()
+    #request['predictions'] = p_lgbm.tolist()
+    #request['y_val'] = y_val.to_list()
 
     # Extract metrics
     print('Extracting metrics')
@@ -65,6 +65,13 @@ def train_model(request, context):
     request['r2_score'] = r2
     request['mean_absolute_error'] = mae
     request['mean_squared_error'] = mse
+
+
+    # Predicti to whole data
+    print('Predicting to whole data')
+    p_all_data = lgbm.predict(df.drop(['pixel_x', 'pixel_y', 'lat', 'long', 'z'], axis=1))
+    request['predictions'] = p_all_data.tolist()
+    request['y_true'] = df['z'].to_list()
 
     # Write model into bucket
     print('Writing model into s3')

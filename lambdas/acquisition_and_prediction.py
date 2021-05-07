@@ -13,8 +13,6 @@ import zipfile
 import os
 
 
-
-
 s3_client = boto3.client('s3')
 s3r = boto3.resource('s3')
 
@@ -70,9 +68,13 @@ def acquisition_and_prediction(request, context):
     ee.Initialize(credentials)
 
     deserilizer = ee.deserializer.fromJSON(request['gee_image_data'])
-    image = ee.Image(deserilizer)
+    single_image = ee.Image(deserilizer)
 
-    params = {"scale": 30, "filePerBand":True, "crs": "EPSG:4326"}
+    image = single_image.reduceNeighborhood(ee.Reducer.median(),ee.Kernel.square(150, 'meters'))
+
+    roi = image.geometry().getInfo()['coordinates'][0]
+
+    params = {"scale": 30, "filePerBand":True, "crs": "EPSG:4326", 'region': roi}
     try:
         print('Downloading images')
         url = image.getDownloadURL(params)
@@ -148,8 +150,9 @@ def acquisition_and_prediction(request, context):
 
     # Read raw bat dataframe from s3 bucket
     bucket_name = 'sentinel-cassie'
+    prediction_formated_name = request['prediction_name'].strip().lower().replace(' ', '_')
     mdl_path = '{}/{}'.format(request['s3_mdl_path'], 'lgbm_model.pkl.z')
-    df_all_image_name = '{}/df_predicion.csv'.format(request['s3_mdl_path'])
+    df_all_image_name = '{}/{}'.format(request['s3_mdl_path'], prediction_formated_name)
     #df_all_image_name = f'{base_path}/df_all_image.csv'
 
     request['s3_prediction_path'] = df_all_image_name
